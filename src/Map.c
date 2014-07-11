@@ -5,8 +5,6 @@
 #include "Person.h"
 #include "ErrorCode.h"
 
-// #define personGetFromBucket(x) ((List *)(x))->data
-
 Map *mapNew(int length){
   Map *map = malloc(sizeof(Map));
   
@@ -37,6 +35,28 @@ void mapStore(Map *map, void *element, int(*compare)(void *, void*),unsigned int
   }
 }
 
+/* mapFind -> To find person in map.
+ *  Is NULL? Yes, return NULL. Otherwise, compare
+ *    (a) Yes, return person
+ *    Otherwise, check next is NULL?
+ *      Yes, return NULL
+ *      Otherwise, compare and repeat step (a)
+ */
+
 void *mapFind(Map *map, void *element, int(*compare)(void *, void*),unsigned int (*hash)(void*)){
-  return NULL;
+  Person *searchPerson;
+  int index;
+  index = hash(element);
+  
+  if(((List *)map->bucket[index]) == NULL){
+    return NULL;
+  }
+  else{
+    if(compare( ((List *)map->bucket[index])->data,element) == 1){
+      searchPerson = (Person *)(((List *)map->bucket[index])->data);
+      printf("Person found! %s\n",((Person *)(((List *)map->bucket[index])->data))->name);
+    }
+  }
+  
+  return searchPerson;
 }
