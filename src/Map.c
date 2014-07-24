@@ -3,6 +3,7 @@
 #include "Map.h"
 #include "LinkedList.h"
 #include "Person.h"
+#include "comparePerson.h"
 #include "ErrorCode.h"
 
 Map *mapNew(int length){
@@ -13,6 +14,73 @@ Map *mapNew(int length){
   map->size = 0;
   
   return map;
+}
+
+void mapLinearStore(Map *map, void *element, int(*compare)(void *, void*), unsigned int (*hash)(void*)){
+  int index, bufferLength, hashValue;
+  index = hash(element);
+  hashValue = index;
+  
+  if(map != NULL){
+    bufferLength = map->length;
+    while(map->bucket[index] != NULL){
+      if(compare(map->bucket[index],element))
+        Throw(ERR_SAME_ELEMENT);
+      index = index + 1;
+      if(index >= bufferLength)
+        Throw(ERR_BUCKET_FULL);
+    }
+    map->bucket[index] = element;
+    if(map->bucket[index-1] == NULL && index > 0){
+      map->bucket[index-1] == (void *)-1;
+    }
+  }
+  // printf("%d\n", hashValue);
+  // printf("%d\n", isBucketEmpty(map->bucket[1]));
+  // printf("%d\n", isBucketEmpty(map->bucket[3]));
+}
+
+/*  mapLinearFind
+ *  ----------------------
+ *  if NULL, check mark 
+ *  ----------------------
+ *  if got mark, go next   <------------+
+ *  Otherwise, return NULL              |
+ *  ----------------------              |
+ *  compare, both match?                |
+ *  yes, return. Otherwise, check mark -+
+ */
+
+void *mapLinearFind(Map *map, void *element, int(*compare)(void *, void*),unsigned int (*hash)(void*)){
+  Person *searchPerson = NULL;
+  int index, bufferLength;
+  index = hash(element);
+  bufferLength = map->length;
+  
+  if(isBucketEmpty(map->bucket[index])&&(isBucketMarked(map->bucket[index]) == 0))
+    return NULL;
+  
+  if(isBucketEmpty(map->bucket[index])){ //NULL
+    if(isBucketMarked(map->bucket[index])){ //MARKED
+      index = index + 1;
+      if(index > bufferLength)
+        Throw(ERR_OUT_OF_BOUND);
+    }
+    if(compare(map->bucket[index], element) == 1){ // element in next index not the same
+      searchPerson = (Person *)(map->bucket[index]);
+      return searchPerson;
+    }
+    return NULL;
+  }
+  else{ // map->bucket[index] != NULL
+    while(compare(map->bucket[index], element) == 0){ // Compare and not match
+      index = index + 1;
+      if(index > bufferLength)
+        Throw(ERR_OUT_OF_BOUND);
+    }
+    searchPerson = (Person *)(map->bucket[index]);
+    return searchPerson;
+  }
 }
 
 void mapStore(Map *map, void *element, int(*compare)(void *, void*),unsigned int (*hash)(void*)){
@@ -70,6 +138,42 @@ void *mapFind(Map *map, void *element, int(*compare)(void *, void*),unsigned int
   }
   
   return searchPerson;
+}
+
+/*
+ *  Remove
+ *  Hash
+ *  Check bucket is null or mark
+ *  If null and no mark, return NULL
+ *  Otherwise, compare
+ *
+ *  Correct, return remove out of bound
+ *  otherwise, index + 1
+ */
+
+void *mapLinearRemove(Map *map, void *element, int(*compare)(void *, void*),unsigned int (*hash)(void*)){
+  Person *removePerson = NULL;
+  int index, bufferLength;
+  index = hash(element);
+  if(isBucketEmpty(map->bucket[index])&&(isBucketMarked(map->bucket[index]) == 0))
+    return NULL;
+  else{  
+    bufferLength = map->length;
+    if(isBucketMarked(map->bucket[index])){
+      index = index + 1;
+      if(index > bufferLength)
+        Throw(ERR_OUT_OF_BOUND);
+    }
+    if(compare(map->bucket[index], element) == 1){
+      removePerson = map->bucket[index];
+      map->bucket[index]=NULL;
+      if(isBucketEmpty(map->bucket[index-1])){
+        map->bucket[index-1] = NULL;
+      }
+      return removePerson;
+    }
+    return NULL;
+  }
 }
 
 void *mapRemove(Map *map, void *element, int(*compare)(void *, void*),unsigned int (*hash)(void*)){
