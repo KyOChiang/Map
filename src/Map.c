@@ -31,9 +31,6 @@ void mapLinearStore(Map *map, void *element, int(*compare)(void *, void*), unsig
         Throw(ERR_BUCKET_FULL);
     }
     map->bucket[index] = element;
-    if(map->bucket[index-1] == NULL && index > 0){
-      map->bucket[index-1] == (void *)-1;
-    }
   }
   // printf("%d\n", hashValue);
   // printf("%d\n", isBucketEmpty(map->bucket[1]));
@@ -59,27 +56,25 @@ void *mapLinearFind(Map *map, void *element, int(*compare)(void *, void*),unsign
   
   if(isBucketEmpty(map->bucket[index])&&(isBucketMarked(map->bucket[index]) == 0))
     return NULL;
-  
-  if(isBucketEmpty(map->bucket[index])){ //NULL
-    if(isBucketMarked(map->bucket[index])){ //MARKED
+  else{
+    while(isBucketMarked(map->bucket[index])){ //NULL
       index = index + 1;
-      if(index > bufferLength)
+      if(index >= bufferLength)
         Throw(ERR_OUT_OF_BOUND);
     }
     if(compare(map->bucket[index], element) == 1){ // element in next index not the same
       searchPerson = (Person *)(map->bucket[index]);
       return searchPerson;
     }
-    return NULL;
-  }
-  else{ // map->bucket[index] != NULL
-    while(compare(map->bucket[index], element) == 0){ // Compare and not match
-      index = index + 1;
-      if(index > bufferLength)
-        Throw(ERR_OUT_OF_BOUND);
+    else{ // map->bucket[index] != NULL
+      while(compare(map->bucket[index], element) == 0){ // Compare and not match
+        index = index + 1;
+        if(index >= bufferLength)
+          Throw(ERR_OUT_OF_BOUND);
+      }
+      searchPerson = (Person *)(map->bucket[index]);
+      return searchPerson;
     }
-    searchPerson = (Person *)(map->bucket[index]);
-    return searchPerson;
   }
 }
 
@@ -153,26 +148,49 @@ void *mapFind(Map *map, void *element, int(*compare)(void *, void*),unsigned int
 
 void *mapLinearRemove(Map *map, void *element, int(*compare)(void *, void*),unsigned int (*hash)(void*)){
   Person *removePerson = NULL;
-  int index, bufferLength;
+  int index, nextHash, bufferLength, hashVal;
   index = hash(element);
+  hashVal = index;
+  bufferLength = map->length;
+  if(index >= bufferLength)
+    Throw(ERR_OUT_OF_BOUND);
   if(isBucketEmpty(map->bucket[index])&&(isBucketMarked(map->bucket[index]) == 0))
     return NULL;
-  else{  
-    bufferLength = map->length;
-    if(isBucketMarked(map->bucket[index])){
+  else{
+    while(isBucketMarked(map->bucket[index])){ //NULL
       index = index + 1;
-      if(index > bufferLength)
+      if(index >= bufferLength)
         Throw(ERR_OUT_OF_BOUND);
     }
-    if(compare(map->bucket[index], element) == 1){
-      removePerson = map->bucket[index];
-      map->bucket[index]=NULL;
-      if(isBucketEmpty(map->bucket[index-1])){
-        map->bucket[index-1] = NULL;
+    if(isBucketEmpty(map->bucket[index])&&(isBucketMarked(map->bucket[index]) == 0))
+      return NULL;
+    if(compare(map->bucket[index], element) == 1){ // element in next index not the same
+      removePerson = (Person *)(map->bucket[index]);
+      map->bucket[index] = NULL;
+      if((index + 1)<bufferLength&& map->bucket[index+1]!=NULL){
+        nextHash = hash((void *)map->bucket[index + 1]);
+        if(nextHash == hashVal)
+          map->bucket[index] = (void *)-1;
       }
       return removePerson;
     }
-    return NULL;
+    else{ // map->bucket[index] != NULL
+      while(compare(map->bucket[index], element) == 0){ // Compare and not match
+        index = index + 1;
+        if(index >= bufferLength)
+          Throw(ERR_OUT_OF_BOUND);
+      }
+      if(isBucketEmpty(map->bucket[index])&&(isBucketMarked(map->bucket[index]) == 0))
+        return NULL;
+      removePerson = (Person *)(map->bucket[index]);
+      map->bucket[index] = NULL;
+      if((index + 1)<bufferLength&& map->bucket[index+1]!=NULL){
+        nextHash = hash((void *)map->bucket[index + 1]);
+        if(nextHash == hashVal)
+          map->bucket[index] = (void *)-1;
+      }
+      return removePerson;
+    }
   }
 }
 
